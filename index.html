@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Budgétaire des Projets</title>
+    <title>Suivi Budgétaire Collaboratif</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #f8fafc;
@@ -41,7 +42,6 @@
             font-weight: 600;
         }
 
-        /* Style du Tableau */
         .table-container {
             overflow-x: auto;
         }
@@ -80,14 +80,12 @@
         .amount {
             font-family: monospace;
             font-size: 1rem;
-            text-align: right;
         }
         
         th.text-right, td.text-right {
             text-align: right;
         }
 
-        /* Formulaire d'ajout rapide (pour la 'vibe' interactive) */
         .add-project-form {
             display: grid;
             grid-template-columns: 2fr 1fr 1fr 1fr auto;
@@ -128,7 +126,7 @@
 <body>
 
 <div class="container">
-    <h1>Suivi Budgétaire des Projets</h1>
+    <h1>Suivi Budgétaire (Connecté à Supabase)</h1>
     
     <div class="table-container">
         <table>
@@ -141,25 +139,7 @@
                 </tr>
             </thead>
             <tbody id="project-rows">
-                <tr>
-                    <td class="project-name">Refonte Site Web V3</td>
-                    <td class="amount text-right">15 000 €</td>
-                    <td class="amount text-right">16 500 €</td>
-                    <td class="amount text-right">16 200 €</td>
-                </tr>
-                <tr>
-                    <td class="project-name">Application Mobile iOS</td>
-                    <td class="amount text-right">24 000 €</td>
-                    <td class="amount text-right">24 000 €</td>
-                    <td class="amount text-right">27 500 €</td>
-                </tr>
-                <tr>
-                    <td class="project-name">Campagne Marketing QA</td>
-                    <td class="amount text-right">5 000 €</td>
-                    <td class="amount text-right">4 500 €</td>
-                    <td class="amount text-right">4 500 €</td>
-                </tr>
-            </tbody>
+                </tbody>
         </table>
     </div>
 
@@ -173,40 +153,77 @@
 </div>
 
 <script>
+    // ⚠️ METS TES PROPRES CLÉS ICI :
+    const SUPABASE_URL = "https://awojmkrbcxhjjyabfwkx.supabase.co/rest/v1/"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3b2pta3JiY3hoamp5YWJmd2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTc2NzksImV4cCI6MjA5NjE3MzY3OX0.Qr3M8PImiJBpocGvzUp94MSUU-B5YKnmNubDHZ4nGgc";
+
+    // Initialisation du client Supabase
+    const supabase = lib.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Fonction pour formater l'argent
     function formatCurrency(amount) {
-        if (!amount || isNaN(amount)) return "-";
+        if (amount === null || amount === undefined || amount === "") return "-";
         return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
     }
 
-    function addProject() {
-        const name = document.getElementById('p-name').value;
-        const budget = document.getElementById('p-budget').value;
-        const rev1 = document.getElementById('p-rev1').value;
-        const rev2 = document.getElementById('p-rev2').value;
+    // 1. LIRE LES DONNÉES (Afficher au chargement de la page)
+    async function loadProjects() {
+        const { data, error } = await supabase
+            .from('projets')
+            .select('*')
+            .order('created_at', { ascending: true });
 
-        if (!name || !budget) {
-            alert("Veuillez remplir au moins le nom et le budget initial.");
+        if (error) {
+            console.error("Erreur lors du chargement :", error);
             return;
         }
 
         const tbody = document.getElementById('project-rows');
-        const tr = document.createElement('tr');
+        tbody.innerHTML = ""; // On vide le tableau avant de le remplir
 
-        tr.innerHTML = `
-            <td class="project-name">${name}</td>
-            <td class="amount text-right">${formatCurrency(budget)}</td>
-            <td class="amount text-right">${formatCurrency(rev1)}</td>
-            <td class="amount text-right">${formatCurrency(rev2)}</td>
-        `;
-
-        tbody.appendChild(tr);
-
-        // Réinitialiser les champs du formulaire
-        document.getElementById('p-name').value = '';
-        document.getElementById('p-budget').value = '';
-        document.getElementById('p-rev1').value = '';
-        document.getElementById('p-rev2').value = '';
+        data.forEach(project => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="project-name">${project.nom}</td>
+                <td class="amount text-right">${formatCurrency(project.budget_initial)}</td>
+                <td class="amount text-right">${formatCurrency(project.rev1)}</td>
+                <td class="amount text-right">${formatCurrency(project.rev2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
+
+    // 2. ENREGISTRER LES DONNÉES (Ajouter un projet)
+    async function addProject() {
+        const nom = document.getElementById('p-name').value;
+        const budget_initial = document.getElementById('p-budget').value;
+        const rev1 = document.getElementById('p-rev1').value || null;
+        const rev2 = document.getElementById('p-rev2').value || null;
+
+        if (!nom || !budget_initial) {
+            alert("Veuillez remplir au moins le nom et le budget initial.");
+            return;
+        }
+
+        // Envoi à Supabase
+        const { error } = await supabase
+            .from('projets')
+            .insert([{ nom, budget_initial, rev1, rev2 }]);
+
+        if (error) {
+            alert("Erreur lors de la sauvegarde : " + error.message);
+        } else {
+            // Réinitialiser le formulaire et recharger la liste
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-budget').value = '';
+            document.getElementById('p-rev1').value = '';
+            document.getElementById('p-rev2').value = '';
+            loadProjects();
+        }
+    }
+
+    // Lancer le chargement automatique dès que la page s'ouvre
+    window.onload = loadProjects;
 </script>
 
 </body>
