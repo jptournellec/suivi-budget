@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi Budgétaire des Projets</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* Style du Tableau */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .project-name {
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .amount {
+            font-family: monospace;
+            font-size: 1rem;
+            text-align: right;
+        }
+        
+        th.text-right, td.text-right {
+            text-align: right;
+        }
+
+        /* Formulaire d'ajout rapide (pour la 'vibe' interactive) */
+        .add-project-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed var(--border-color);
+        }
+
+        input {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Suivi Budgétaire des Projets</h1>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom du Projet</th>
+                    <th class="text-right">Budget Initial</th>
+                    <th class="text-right">Révision (Rev1)</th>
+                    <th class="text-right">Révision (Rev2)</th>
+                </tr>
+            </thead>
+            <tbody id="project-rows">
+                <tr>
+                    <td class="project-name">Refonte Site Web V3</td>
+                    <td class="amount text-right">15 000 €</td>
+                    <td class="amount text-right">16 500 €</td>
+                    <td class="amount text-right">16 200 €</td>
+                </tr>
+                <tr>
+                    <td class="project-name">Application Mobile iOS</td>
+                    <td class="amount text-right">24 000 €</td>
+                    <td class="amount text-right">24 000 €</td>
+                    <td class="amount text-right">27 500 €</td>
+                </tr>
+                <tr>
+                    <td class="project-name">Campagne Marketing QA</td>
+                    <td class="amount text-right">5 000 €</td>
+                    <td class="amount text-right">4 500 €</td>
+                    <td class="amount text-right">4 500 €</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="add-project-form">
+        <input type="text" id="p-name" placeholder="Nom du projet..." required>
+        <input type="number" id="p-budget" placeholder="Budget Initial (€)..." required>
+        <input type="number" id="p-rev1" placeholder="Rev1 (€)...">
+        <input type="number" id="p-rev2" placeholder="Rev2 (€)...">
+        <button onclick="addProject()">Ajouter</button>
+    </div>
+</div>
+
+<script>
+    function formatCurrency(amount) {
+        if (!amount || isNaN(amount)) return "-";
+        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+    }
+
+    function addProject() {
+        const name = document.getElementById('p-name').value;
+        const budget = document.getElementById('p-budget').value;
+        const rev1 = document.getElementById('p-rev1').value;
+        const rev2 = document.getElementById('p-rev2').value;
+
+        if (!name || !budget) {
+            alert("Veuillez remplir au moins le nom et le budget initial.");
+            return;
+        }
+
+        const tbody = document.getElementById('project-rows');
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+            <td class="project-name">${name}</td>
+            <td class="amount text-right">${formatCurrency(budget)}</td>
+            <td class="amount text-right">${formatCurrency(rev1)}</td>
+            <td class="amount text-right">${formatCurrency(rev2)}</td>
+        `;
+
+        tbody.appendChild(tr);
+
+        // Réinitialiser les champs du formulaire
+        document.getElementById('p-name').value = '';
+        document.getElementById('p-budget').value = '';
+        document.getElementById('p-rev1').value = '';
+        document.getElementById('p-rev2').value = '';
+    }
+</script>
+
+</body>
+</html>
